@@ -5,61 +5,11 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+int forceX = 0;
+int forceZ = 0;
+int moveSpeed = 1;
 
-
-int textureID;
-
-//-------------------------------------------------------
-// Desenha um cubo com textura na posição (x, y, z)
-//-------------------------------------------------------
-/*void drawTexturedCubeAt(int x, int y, int z) {
-    glPushMatrix();
-    glTranslatef(x, y, z);
-
-    glBindTexture(GL_TEXTURE_2D, textureID);
-    glBegin(GL_QUADS);
-
-    glColor3b(255, 255, 255); // cor neutra para textura
-
-    // Frente
-    glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, 0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(0.5, -0.5, 0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, 0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, 0.5, 0.5);
-
-    // Trás
-    glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, -0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(0.5, -0.5, -0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, -0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, 0.5, -0.5);
-
-    // Esquerda
-    glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, -0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, -0.5, 0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(-0.5, 0.5, 0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(-0.5, 0.5, -0.5);
-
-    // Direita
-    glTexCoord2f(0.0, 1.0); glVertex3f(0.5, -0.5, -0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(0.5, -0.5, 0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, 0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.5, -0.5);
-
-    // Topo
-    glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, 0.5, -0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, 0.5, 0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(0.5, 0.5, 0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(0.5, 0.5, -0.5);
-
-    // Base
-    glTexCoord2f(0.0, 1.0); glVertex3f(-0.5, -0.5, -0.5);
-    glTexCoord2f(1.0, 1.0); glVertex3f(-0.5, -0.5, 0.5);
-    glTexCoord2f(1.0, 0.0); glVertex3f(0.5, -0.5, 0.5);
-    glTexCoord2f(0.0, 0.0); glVertex3f(0.5, -0.5, -0.5);
-
-    glEnd();
-    glPopMatrix(1);
-}*/
+void calculateMovementVectors(int angle);
 
 void renderCube(int angle, float x, float y, float z) {
     //-------------------------------------------------------
@@ -106,10 +56,12 @@ void renderCube(int angle, float x, float y, float z) {
 
 void forma(int angle, float x, float y, float z) {
     renderCube(angle, x, y, z);
-    renderCube(angle, x, y + 2, z);
-    renderCube(angle, x, y + 4, z);
     renderCube(angle, x - 2, y, z);
     renderCube(angle, x + 2, y, z);
+    renderCube(angle, x - 4, y + 2, z);
+    renderCube(angle, x + 4, y + 2, z);
+    renderCube(angle, x - 2, y + 6, z);
+    renderCube(angle, x + 2, y + 6, z);
 
 }
 
@@ -137,8 +89,8 @@ int main() {
     int camRotX = 0;
     int camRotY = 0;
 
-    float moveSpeed = 0.25f;
-    float angleRad = camRotY * (M_PI / 32768.0); // converte de f32 para radianos
+    
+    float angleRad = camRotY * (M_PI / 32768.0); // converte de f32 para radianossad
 
     /*s16 dx = cosf(camRotY);
     s16 dz = sinf(camRotY);*/
@@ -170,12 +122,16 @@ int main() {
 
     while (1) {
         swiWaitForVBlank();
+        
+
 
         float radY = camRotY * (M_PI / 32768.0); // converte f32 para rad
         float radX = camRotX * (M_PI / 32768.0);
 
         float forwardX = sinf(radY);             // eixo X
         float forwardZ = cosf(radY);             // eixo Z
+
+        
 
 
         scanKeys();
@@ -238,9 +194,6 @@ int main() {
 
         //renderCube(0, x, y, z);
 
-        
-
-        
 
         
 
@@ -249,9 +202,50 @@ int main() {
         iprintf("X: %d\n", (int)x);
         iprintf("Y: %d\n", (int)y);
         iprintf("Z: %d\n", (int)z);
+        iprintf("camY: %d\n", (int)camRotY);
 
         glFlush(0);
     }
 
     return 0;
+}
+
+void calculateMovementVectors(int angle) {
+    // Obter o seno e cosseno do ângulo.
+        // O libnds usa sinLerp/cosLerp para ponto fixo, que retornam valores Q15 (entre -32768 e 32767).
+    int sin_val = sinLerp(angle);
+    int cos_val = cosLerp(angle);
+
+    // --- CÁLCULO DAS FORÇAS (X e Z) ---
+
+    // Força Z: moveSpeed * cos(angle)
+    // O cálculo de ponto fixo precisa ser ajustado:
+    // (moveSpeed * cos_val) >> 12 é um bom ponto de partida se moveSpeed for 'int' e cos_val for Q15.
+    // Dependendo do seu sistema de coordenadas, você pode precisar de um ajuste de escala diferente.
+
+    // Usaremos um shift de 12 para um bom equilíbrio (moveSpeed é 'int' e sin/cos é Q15)
+    // Isso é equivalente a: (moveSpeed * cos_val) / 4096.0
+    // O 4096 (2^12) é um valor de escala escolhido empiricamente para um bom movimento.
+
+    // Cálculo da Força Z (Movimento Frente/Trás)
+    // Sinal Negativo/Positivo no Z:
+    // Se a sua câmera usa +Z como "para frente" (padrão em muitos motores), você pode usar o sinal direto.
+    // Se a sua câmera usa -Z como "para frente" (comum no DevKitPro para 'olhar para -Z'), você
+    // pode precisar inverter o sinal do cos_val ou do resultado.
+
+    // Vamos assumir o padrão: +Z é para a frente.
+    forceZ = (moveSpeed * cos_val) >> 12;
+
+    // Cálculo da Força X (Movimento Esquerda/Direita)
+    forceX = (moveSpeed * sin_val) >> 12;
+
+    // --- Aplicação ao movimento (exemplo) ---
+    // Você aplicaria estes valores às coordenadas da sua entidade (playerX, playerZ).
+    // playerX += forceX;
+    // playerZ += forceZ;
+
+    // Exemplo de exibição (apenas para debug)
+    // iprintf("\nRot Y: %d", angle);
+    // iprintf("\nForca X: %d", forceX);
+    // iprintf("\nForca Z: %d", forceZ);
 }
